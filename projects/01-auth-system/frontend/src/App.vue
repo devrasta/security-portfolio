@@ -5,15 +5,36 @@ import HelloWorld from './components/HelloWorld.vue'
 
 <template>
   <header>
-    <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
+    <div class="navbar bg-base-100 shadow-sm">
+      <div class="flex-1">
+        <a class="btn btn-ghost text-xl">Auth system</a>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" placeholder="Search" class="input input-bordered w-24 md:w-auto" />
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+            <div class="w-10 rounded-full">
+              <img
+                alt="Tailwind CSS Navbar component"
+                src="https://plus.unsplash.com/premium_photo-1683140621573-233422bfc7f1"
+              />
+            </div>
+          </div>
+          <ul
+            tabindex="-1"
+            class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+          >
+            <li>
+              <a class="justify-between">
+                Profile
+                <span class="badge">New</span>
+              </a>
+            </li>
+            <li><a>Settings</a></li>
+            <li><a>Logout</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -21,7 +42,7 @@ import HelloWorld from './components/HelloWorld.vue'
 </template>
 
 <style scoped>
-header {
+/*header {
   line-height: 1.5;
   max-height: 100vh;
 }
@@ -81,5 +102,5 @@ nav a:first-of-type {
     padding: 1rem 0;
     margin-top: 1rem;
   }
-}
+}*/
 </style>
