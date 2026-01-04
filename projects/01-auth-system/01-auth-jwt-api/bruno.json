@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "01-auth-jwt-api",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

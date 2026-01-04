@@ -62,4 +62,4 @@ USER node
 EXPOSE 4001
 
 # Start both NestJS and Nginx
-CMD sh -c "node dist/main.js & nginx -g 'daemon off;'"
+CMD sh -c "node dist/src/main.js & nginx -g 'daemon off;'"
