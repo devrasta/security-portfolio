@@ -1,19 +1,24 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from '@/modules/users/users.service';
 import { HashService } from '@/modules/security/hash.service';
 import { TokenService } from '@/modules/security/token.service';
 import { ValidationService } from '@/modules/security/validation.service';
-import { JwtService } from '@nestjs/jwt';
+import { JwtManagerService } from '@/modules/security/jwtManager.service';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private hashService: HashService,
-    private jwtService: JwtService,
+    private jwtService: JwtManagerService,
     private validationService: ValidationService,
     private tokenService: TokenService,
-    private userService: UsersService,
+    private usersService: UsersService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -32,21 +37,21 @@ export class AuthService {
     const verificationToken = this.tokenService.generateVerificationToken();
 
     // 4. Create user
-    return this.usersService.create({
+    return this.usersService.createUser({
       ...dto,
       password: hashedPassword,
       emailVerificationToken: verificationToken,
     });
   }
 
-  async login(email: string, password: string) {
+  async login(loginParams: LoginDto) {
     // 1. Find user
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmail(loginParams.email);
 
     // 2. Verify password
     const isValid = await this.hashService.verifyPassword(
       user.password,
-      password,
+      loginParams.password,
     );
 
     if (!isValid) {

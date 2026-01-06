@@ -15,11 +15,20 @@ COPY package.json yarn.lock ./
 # Install dependencies
 RUN --mount=type=cache,target=/root/.yarn yarn install --frozen-lockfile
 
+# Copy prisma schema first
+COPY prisma ./prisma
+
+# Generate Prisma Client
+RUN npx prisma generate
+
 # Copy source code
 COPY . .
 
 # Build the NestJS application
 RUN yarn build
+
+# Verify the build output
+RUN ls -la dist/ && test -f dist/src/main.js || (echo "Error: dist/src/main.js not found!" && exit 1)
 
 # =========================================
 # Stage 2: Production Dependencies
