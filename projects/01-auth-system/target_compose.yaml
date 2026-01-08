@@ -55,12 +55,6 @@ services:
         condition: service_healthy
       auth-redis:
         condition: service_started
-    volumes:
-      # Décommenter pour le mode dev avec hot-reload
-      # - ./backend/src:/app/src
-      # - ./backend/prisma:/app/prisma
-      # - /app/node_modules
-      # - /app/dist
     networks:
       - auth-internal
       - traefik-public

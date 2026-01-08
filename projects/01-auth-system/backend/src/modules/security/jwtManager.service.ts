@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config';
 interface JwtPayload {
   userId: string;
   email: string;
-  role: string;
 }
 
 @Injectable()
@@ -14,7 +13,7 @@ export class JwtManagerService {
     private readonly nestJwtService: NestJwtService,
     private readonly config: ConfigService,
   ) {}
-  // Generate Access Token (15 min)
+  // Generate Access Token
   generateAccessToken(payload: JwtPayload): string {
     return this.nestJwtService.sign(
       { sub: payload.userId, email: payload.email, role: payload.role },
@@ -25,7 +24,7 @@ export class JwtManagerService {
     );
   }
 
-  // Generate Refresh Token (7 days)
+  // Generate Refresh Token
   generateRefreshToken(userId: string): string {
     return this.nestJwtService.sign(
       { sub: userId, type: 'refresh' },
