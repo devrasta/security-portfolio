@@ -23,8 +23,11 @@ COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
 
+# Debug: Show environment variables
+RUN echo "Building with VITE_API_URL=${VITE_API_URL}"
+
 # Build the Vue.js application
-RUN yarn build
+RUN yarn build || (cat /tmp/yarn-error.log 2>/dev/null && exit 1)
 
 # =========================================
 # Stage 2: Prepare Nginx to Serve Static Files
