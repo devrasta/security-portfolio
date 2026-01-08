@@ -27,10 +27,10 @@ RUN echo "/* Generated index file */" > src/modules/prisma/generated/index.ts &&
     echo "export * from './models';" >> src/modules/prisma/generated/index.ts
 
 # Build the NestJS application
-RUN yarn build
+RUN yarn build 2>&1 || (echo "=== BUILD FAILED ===" && cat /root/.yarn/berry/cache/*.log 2>/dev/null; exit 1)
 
 # Verify the build output
-RUN ls -la dist/ && test -f dist/src/main.js || (echo "Error: dist/src/main.js not found!" && exit 1)
+RUN ls -la dist/ && test -f dist/src/main.js || (echo "Error: dist/src/main.js not found!" && ls -R dist/ && exit 1)
 
 # =========================================
 # Stage 2: Production Dependencies
