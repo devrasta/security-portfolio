@@ -26,8 +26,13 @@ RUN echo "/* Generated index file */" > src/modules/prisma/generated/index.ts &&
     echo "export * from './client';" >> src/modules/prisma/generated/index.ts && \
     echo "export * from './models';" >> src/modules/prisma/generated/index.ts
 
-# Build the NestJS application
-RUN yarn build 2>&1 || (echo "=== BUILD FAILED ===" && cat /root/.yarn/berry/cache/*.log 2>/dev/null; exit 1)
+# Debug: Verify Prisma generated files exist
+RUN echo "=== Checking Prisma generated files ===" && \
+    ls -la src/modules/prisma/generated/ && \
+    cat src/modules/prisma/generated/index.ts
+
+# Build the NestJS application with verbose output
+RUN set -x && yarn build
 
 # Verify the build output
 RUN ls -la dist/ && test -f dist/src/main.js || (echo "Error: dist/src/main.js not found!" && ls -R dist/ && exit 1)
