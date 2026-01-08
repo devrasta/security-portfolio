@@ -15,14 +15,16 @@ COPY package.json yarn.lock ./
 # Install dependencies
 RUN --mount=type=cache,target=/root/.yarn yarn install --frozen-lockfile
 
-# Copy prisma schema first
-COPY prisma ./prisma
+# Copy source code first (needed for prisma generate with custom output path)
+COPY . .
 
-# Generate Prisma Client
+# Generate Prisma Client (will create src/modules/prisma/generated)
 RUN npx prisma generate
 
-# Copy source code
-COPY . .
+# Create index.ts for Prisma generated client exports
+RUN echo "/* Generated index file */" > src/modules/prisma/generated/index.ts && \
+    echo "export * from './client';" >> src/modules/prisma/generated/index.ts && \
+    echo "export * from './models';" >> src/modules/prisma/generated/index.ts
 
 # Build the NestJS application
 RUN yarn build
