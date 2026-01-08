@@ -74,7 +74,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+        VITE_API_URL: ${VITE_API_URL}
     container_name: auth-frontend
     restart: unless-stopped
     networks:

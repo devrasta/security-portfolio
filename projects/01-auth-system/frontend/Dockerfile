@@ -19,6 +19,10 @@ RUN --mount=type=cache,target=/root/.yarn yarn install --frozen-lockfile
 # Copy the rest of the application source code into the container
 COPY . .
 
+# Accept build argument for Vite API URL
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Build the Vue.js application
 RUN yarn build
 
