@@ -2,30 +2,33 @@
 import { ref } from 'vue'
 import { z } from 'zod'
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
   email: z.string().email('Adresse email invalide'),
-  password: z.string().min(1, 'Le mot de passe est requis'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
 })
 
-type LoginForm = z.infer<typeof loginSchema>
+type RegisterForm = z.infer<typeof registerSchema>
 
-const form = ref<LoginForm>({
+const form = ref<RegisterForm>({
+  name: '',
   email: '',
   password: '',
 })
 
-const errors = ref<Partial<Record<keyof LoginForm, string>>>({})
+const errors = ref<Partial<Record<keyof RegisterForm, string>>>({})
 const isSubmitting = ref(false)
 
 const handleSubmit = async (event: Event) => {
   event.preventDefault()
   errors.value = {}
 
-  const result = loginSchema.safeParse(form.value)
+  const result = registerSchema.safeParse(form.value)
 
   if (!result.success) {
     const fieldErrors = result.error.flatten().fieldErrors
     errors.value = {
+      name: fieldErrors.name?.[0],
       email: fieldErrors.email?.[0],
       password: fieldErrors.password?.[0],
     }
@@ -34,10 +37,10 @@ const handleSubmit = async (event: Event) => {
 
   isSubmitting.value = true
   try {
-    // TODO: Call API to login user
+    // TODO: Call API to register user
     console.log('Valid data:', result.data)
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Registration error:', error)
   } finally {
     isSubmitting.value = false
   }
@@ -59,12 +62,36 @@ const handleSubmit = async (event: Event) => {
       <h2
         class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white"
       >
-        Connectez vous au tableau de bord
+        Créez votre compte
       </h2>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
       <form @submit="handleSubmit" class="space-y-6">
+        <div>
+          <label for="name" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100"
+            >Nom complet</label
+          >
+          <div class="mt-2">
+            <input
+              id="name"
+              v-model="form.name"
+              type="text"
+              name="name"
+              autocomplete="name"
+              :class="[
+                'block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500',
+                errors.name
+                  ? 'outline-red-500 focus:outline-red-600 dark:outline-red-500 dark:focus:outline-red-500'
+                  : 'outline-gray-300 focus:outline-indigo-600 dark:focus:outline-indigo-500',
+              ]"
+            />
+          </div>
+          <p v-if="errors.name" class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ errors.name }}
+          </p>
+        </div>
+
         <div>
           <label for="email" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100"
             >Addresse email</label
@@ -90,20 +117,16 @@ const handleSubmit = async (event: Event) => {
         </div>
 
         <div>
-          <div class="flex items-center justify-between">
-            <label
-              for="password"
-              class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100"
-              >Mot de passe</label
-            >
-          </div>
+          <label for="password" class="block text-sm/6 font-medium text-gray-900 dark:text-gray-100"
+            >Mot de passe</label
+          >
           <div class="mt-2">
             <input
               id="password"
               v-model="form.password"
               type="password"
               name="password"
-              autocomplete="current-password"
+              autocomplete="new-password"
               :class="[
                 'block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500',
                 errors.password
@@ -128,17 +151,17 @@ const handleSubmit = async (event: Event) => {
                 : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500',
             ]"
           >
-            {{ isSubmitting ? 'Connexion en cours...' : 'Se connecter' }}
+            {{ isSubmitting ? 'Inscription en cours...' : "S'inscrire" }}
           </button>
         </div>
       </form>
 
       <p class="mt-10 text-center text-sm/6 text-gray-500 dark:text-gray-400">
-        Pas encore de compte?
+        Vous avez déjà un compte?
         <RouterLink
-          to="/register"
+          to="/login"
           class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-          >Inscrivez vous
+          >Connectez vous
         </RouterLink>
       </p>
     </div>
