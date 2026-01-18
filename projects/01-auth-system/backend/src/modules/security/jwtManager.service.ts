@@ -1,11 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService as NestJwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import * as crypto from 'crypto';
+import { HashService } from './hash.service';
 
 interface JwtPayload {
   userId: string;
   email: string;
-  role: string;
+  jti?: string;
 }
 
 @Injectable()
@@ -13,11 +16,13 @@ export class JwtManagerService {
   constructor(
     private readonly nestJwtService: NestJwtService,
     private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly hashService: HashService,
   ) {}
-  // Generate Access Token
+
   generateAccessToken(payload: JwtPayload): string {
     return this.nestJwtService.sign(
-      { sub: payload.userId, email: payload.email, role: payload.role },
+      { sub: payload.userId, email: payload.email },
       {
         expiresIn: this.config.get('JWT_EXPIRES_IN'),
         secret: this.config.get('JWT_SECRET'),
@@ -25,19 +30,71 @@ export class JwtManagerService {
     );
   }
 
-  // Generate Refresh Token
-  generateRefreshToken(userId: string): string {
-    return this.nestJwtService.sign(
-      { sub: userId, type: 'refresh' },
+  async generateRefreshToken(userId: string, tokenFamily: string) {
+    const jti = crypto.randomBytes(16).toString('hex');
+
+    const refreshToken = await this.nestJwtService.signAsync(
       {
-        expiresIn: this.config.get('JWT_REFRESH_EXPIRES_IN'),
-        secret: this.config.get('JWT_REFRESH_SECRET'),
+        sub: userId,
+        type: 'refresh',
+        jti,
+        family: tokenFamily, // ← Dans le payload JWT
+      },
+      {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: '7d',
       },
     );
+
+    await this.prisma.refreshToken.create({
+      data: {
+        jti,
+        userId,
+        token: this.hashService.hashToken(refreshToken),
+        tokenFamily,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        isRevoked: false,
+      },
+    });
+
+    return refreshToken;
   }
 
-  // Verify Access Token
   verifyAccessToken(token: string): JwtPayload {
     return this.nestJwtService.verify(token, this.config.get('JWT_SECRET'));
+  }
+
+  async verifyRefreshToken(token: string) {
+    // Vérifie le JWT
+    const decoded = await this.nestJwtService.verifyAsync(token, {
+      secret: process.env.JWT_REFRESH_SECRET,
+    });
+
+    // Vérifie en DB
+    const storedToken = await this.prisma.refreshToken.findUnique({
+      where: { jti: decoded.jti },
+    });
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Token not found');
+    }
+
+    if (storedToken.isRevoked) {
+      await this.revokeTokenFamily(storedToken.tokenFamily);
+      throw new UnauthorizedException('Token theft detected');
+    }
+
+    return {
+      userId: decoded.sub,
+      tokenFamily: decoded.family,
+      jti: decoded.jti,
+    };
+  }
+
+  async revokeTokenFamily(tokenFamily: string) {
+    await this.prisma.refreshToken.updateMany({
+      where: { tokenFamily },
+      data: { isRevoked: true },
+    });
   }
 }

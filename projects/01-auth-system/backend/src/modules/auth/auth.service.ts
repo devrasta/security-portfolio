@@ -10,6 +10,8 @@ import { ValidationService } from '@/modules/security/validation.service';
 import { JwtManagerService } from '@/modules/security/jwtManager.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import * as crypto from 'node:crypto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -19,10 +21,10 @@ export class AuthService {
     private validationService: ValidationService,
     private tokenService: TokenService,
     private usersService: UsersService,
+    private prisma: PrismaService,
   ) {}
 
   async register(dto: RegisterDto) {
-    // 1. Validate
     if (!this.validationService.isValidEmail(dto.email)) {
       throw new BadRequestException('Invalid email');
     }
@@ -30,13 +32,10 @@ export class AuthService {
       throw new BadRequestException('Weak password');
     }
 
-    // 2. Hash password
     const hashedPassword = await this.hashService.hashPassword(dto.password);
 
-    // 3. Generate verification token
     const verificationToken = this.tokenService.generateVerificationToken();
 
-    // 4. Create user
     return this.usersService.createUser({
       ...dto,
       password: hashedPassword,
@@ -45,10 +44,8 @@ export class AuthService {
   }
 
   async login(loginParams: LoginDto) {
-    // 1. Find user
+    const tokenFamily = crypto.randomUUID();
     const user = await this.usersService.findByEmail(loginParams.email);
-
-    // 2. Verify password
     const isValid = await this.hashService.verifyPassword(
       user.password,
       loginParams.password,
@@ -58,15 +55,73 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // 3. Generate tokens
-    const accessToken = this.jwtService.generateAccessToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    });
-
-    const refreshToken = this.jwtService.generateRefreshToken(user.id);
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.generateAccessToken({
+        userId: user.id,
+        email: user.email,
+      }),
+      this.jwtService.generateRefreshToken(user.id, tokenFamily),
+    ]);
 
     return { accessToken, refreshToken };
+  }
+
+  async generateRefreshToken(userId: string, tokenFamily: string) {
+    const jti = crypto.randomBytes(16).toString('hex');
+
+    const refreshToken = await this.jwtService.generateRefreshToken(
+      userId,
+      tokenFamily,
+    );
+
+    await this.prisma.refreshToken.create({
+      data: {
+        jti,
+        userId,
+        token: this.hashService.hashToken(refreshToken),
+        tokenFamily,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        isRevoked: false,
+      },
+    });
+
+    return refreshToken;
+  }
+
+  async verifyRefreshToken(token: string) {
+    // Vérifie le JWT et le token en DB (validité, révocation)
+    const { userId, tokenFamily, jti } =
+      await this.jwtService.verifyRefreshToken(token);
+
+    // Récupère l'utilisateur associé
+    const user = await this.usersService.findById(userId);
+
+    return { user, tokenFamily, jti };
+  }
+
+  async refresh(refreshToken: string) {
+    // Vérifie et récupère les infos du token
+    const { user, tokenFamily, jti } =
+      await this.verifyRefreshToken(refreshToken);
+
+    // Révoque l'ancien token
+    await this.prisma.refreshToken.update({
+      where: { jti },
+      data: { isRevoked: true },
+    });
+
+    // Génère les nouveaux tokens (même famille pour la rotation)
+    const [newAccessToken, newRefreshToken] = await Promise.all([
+      this.jwtService.generateAccessToken({
+        userId: user.id,
+        email: user.email,
+      }),
+      this.jwtService.generateRefreshToken(user.id, tokenFamily),
+    ]);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
   }
 }
