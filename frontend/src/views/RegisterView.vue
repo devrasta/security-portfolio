@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { z } from 'zod'
+import { KeySquare } from 'lucide-vue-next';
+import * as v from 'valibot'
+import { useAuthStore } from '../stores/auth.store';
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
-  email: z.string().email('Adresse email invalide'),
-  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+const { register } = useAuthStore()
+const registerSchema = v.object({
+  name: v.pipe(v.string(), v.minLength(2, 'Le nom doit contenir au moins 2 caractères')),
+  email: v.pipe(v.string(), v.email('Adresse email invalide')),
+  password: v.pipe(v.string(), v.minLength(8, 'Le mot de passe doit contenir au moins 8 caractères')),
 })
 
-type RegisterForm = z.infer<typeof registerSchema>
+type RegisterForm = v.InferOutput<typeof registerSchema>
 
 const form = ref<RegisterForm>({
   name: '',
@@ -23,22 +26,21 @@ const handleSubmit = async (event: Event) => {
   event.preventDefault()
   errors.value = {}
 
-  const result = registerSchema.safeParse(form.value)
+  const result = v.safeParse(registerSchema, form.value)
 
   if (!result.success) {
-    const fieldErrors = result.error.flatten().fieldErrors
-    errors.value = {
-      name: fieldErrors.name?.[0],
-      email: fieldErrors.email?.[0],
-      password: fieldErrors.password?.[0],
+    for (const issue of result.issues) {
+      const field = issue.path?.[0]?.key as keyof RegisterForm | undefined
+      if (field && !errors.value[field]) {
+        errors.value[field] = issue.message
+      }
     }
     return
   }
 
   isSubmitting.value = true
   try {
-    // TODO: Call API to register user
-    console.log('Valid data:', result.data)
+    register(result.output)
   } catch (error) {
     console.error('Registration error:', error)
   } finally {
@@ -47,18 +49,9 @@ const handleSubmit = async (event: Event) => {
 }
 </script>
 <template>
-  <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img
-        src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-        alt="Your Company"
-        class="mx-auto h-10 w-auto dark:hidden"
-      />
-      <img
-        src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
-        alt="Your Company"
-        class="mx-auto h-10 w-auto not-dark:hidden"
-      />
+  <div class="flex min-h-full flex-col justify-center px-6 py-12 mt-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm flex items-center flex-col">
+      <KeySquare :size="40" />
       <h2
         class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white"
       >

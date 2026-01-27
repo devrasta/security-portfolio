@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserModel as User } from '@/modules/prisma/generated/models';
@@ -22,14 +22,21 @@ export class UsersService {
   }
 
   async createUser(user: CreateUserDto) {
-    try {
-      const result = await this.prisma.user.create({
-        data: user,
-      });
-      return result;
-    } catch (error) {
-      console.error('Full error creating user:', error);
-      throw error;
+    const existingUser = await this.findByEmail(user.email);
+    if (existingUser) {
+      throw new ConflictException('User already exists');
     }
+
+    const createdUser = await this.prisma.user.create({
+      data: user,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+      },
+    });
+
+    return createdUser;
   }
 }

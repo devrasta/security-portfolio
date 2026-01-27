@@ -5,9 +5,11 @@ import { TokenService } from './token.service';
 import { HashService } from './hash.service';
 import { ValidationService } from './validation.service';
 import { JwtManagerService } from './jwtManager.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     JwtModule.register({
       global: true,
     }),

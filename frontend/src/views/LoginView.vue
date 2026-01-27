@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { z } from 'zod'
+import { KeySquare } from 'lucide-vue-next';
+import * as v from 'valibot'
+import { useSeoMeta } from '@unhead/vue'
 
-const loginSchema = z.object({
-  email: z.string().email('Adresse email invalide'),
-  password: z.string().min(1, 'Le mot de passe est requis'),
+useSeoMeta({
+  title: 'Connexion',
+  description: 'Page de connexion au tableau de bord',
+})
+const loginSchema = v.object({
+  email: v.pipe(v.string(), v.email('Adresse email invalide')),
+  password: v.pipe(v.string(), v.minLength(1, 'Le mot de passe est requis')),
 })
 
-type LoginForm = z.infer<typeof loginSchema>
+type LoginForm = v.InferOutput<typeof loginSchema>
 
 const form = ref<LoginForm>({
   email: '',
@@ -21,13 +27,13 @@ const handleSubmit = async (event: Event) => {
   event.preventDefault()
   errors.value = {}
 
-  const result = loginSchema.safeParse(form.value)
+  const result = v.safeParse(loginSchema, form.value)
 
   if (!result.success) {
-    const fieldErrors = result.error.flatten().fieldErrors
+    const fieldErrors = v.flatten(result.issues).nested
     errors.value = {
-      email: fieldErrors.email?.[0],
-      password: fieldErrors.password?.[0],
+      email: fieldErrors?.email?.[0],
+      password: fieldErrors?.password?.[0],
     }
     return
   }
@@ -35,7 +41,7 @@ const handleSubmit = async (event: Event) => {
   isSubmitting.value = true
   try {
     // TODO: Call API to login user
-    console.log('Valid data:', result.data)
+    console.log('Valid data:', result.output)
   } catch (error) {
     console.error('Login error:', error)
   } finally {
@@ -44,18 +50,9 @@ const handleSubmit = async (event: Event) => {
 }
 </script>
 <template>
-  <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <img
-        src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-        alt="Your Company"
-        class="mx-auto h-10 w-auto dark:hidden"
-      />
-      <img
-        src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
-        alt="Your Company"
-        class="mx-auto h-10 w-auto not-dark:hidden"
-      />
+  <div class="flex min-h-full flex-col justify-center px-6 py-12 mt-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm flex items-center flex-col">
+      <KeySquare :size="40" />
       <h2
         class="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900 dark:text-white"
       >

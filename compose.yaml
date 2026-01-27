@@ -42,14 +42,15 @@ services:
     container_name: auth-backend
     restart: unless-stopped
     command: ${BACKEND_COMMAND:-sh -c "node dist/main.js & nginx -g 'daemon off;'"}
+    env_file:
+      - ./backend/.env
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      DATABASE_URL: postgresql://${DB_USER:-auth_user}:${DB_PASSWORD}@auth-db:5432/${DB_NAME:-auth_db}
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@auth-db:5432/${DB_NAME}
       REDIS_URL: redis://:${REDIS_PASSWORD}@auth-redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      PORT: 3000
     depends_on:
       auth-db:
         condition: service_healthy
@@ -59,7 +60,7 @@ services:
       - auth-internal
       - traefik-public
     ports:
-      - "3001:3000" # Exposé pour dev local
+      - "3001:3000"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
@@ -77,6 +78,8 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     container_name: auth-frontend
     restart: unless-stopped
+    env_file:
+      - ./frontend/.env
     networks:
       - traefik-public
     ports:

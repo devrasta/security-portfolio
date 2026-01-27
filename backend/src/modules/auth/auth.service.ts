@@ -124,4 +124,13 @@ export class AuthService {
       refreshToken: newRefreshToken,
     };
   }
+
+  async logout(refreshToken: string) {
+    const { jti } = await this.verifyRefreshToken(refreshToken);
+
+    await this.prisma.refreshToken.update({
+      where: { jti },
+      data: { isRevoked: true },
+    });
+  }
 }
